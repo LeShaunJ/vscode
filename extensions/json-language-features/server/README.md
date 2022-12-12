@@ -65,7 +65,7 @@ The server supports the following settings:
   - `validate`
     - `enable`: Whether the server should validate. Defaults to `true` if not set.
   - `schemas`: Configures association of file names to schema URL or schemas and/or associations of schema URL to schema content.
-    - `fileMatch`: an array of file names or paths (separated by `/`). `*` can be used as a wildcard. Exclusion patterns can also be defined and start with '!'. A file matches when there is at least one matching pattern and the last matching pattern is not an exclusion pattern.
+    - `fileMatch`: an array of file names or paths (separated by `/`). `*` can be used as a wildcard. Exclusion patterns can also be defined and start with `!`. A pattern that begins with `~` is matched from the project-root onward. A file matches when there is at least one matching pattern and the last matching pattern is not an exclusion pattern.
     - `url`: The URL of the schema, optional when also a schema is provided.
     - `schema`: The schema content.
   - `resultLimit`: The max number of color decorators and outline symbols to be computed (for performance reasons)

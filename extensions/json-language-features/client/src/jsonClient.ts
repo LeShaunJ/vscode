@@ -490,13 +490,22 @@ function getSettings(): Settings {
 	const schemaSettingsById: { [schemaId: string]: JSONSchemaSettings } = Object.create(null);
 	const collectSchemaSettings = (schemaSettings: JSONSchemaSettings[], folderUri?: Uri, isMultiRoot?: boolean) => {
 
-		let fileMatchPrefix = undefined;
-		if (folderUri && isMultiRoot) {
-			fileMatchPrefix = folderUri.toString();
-			if (fileMatchPrefix[fileMatchPrefix.length - 1] === '/') {
-				fileMatchPrefix = fileMatchPrefix.substr(0, fileMatchPrefix.length - 1);
+		const rootGlob = '~';
+
+		let fileMatchPrefix = '';
+		let fileMatchBase = '';
+		if (folderUri) {
+			const fileMatchPrefixPaths = folderUri.toString().split('/');
+			if (fileMatchPrefix.at(-1) === '') {
+				fileMatchPrefixPaths.pop();
+			}
+			fileMatchBase = fileMatchPrefixPaths.pop() ?? '';
+			if (isMultiRoot) {
+				fileMatchPrefix = fileMatchPrefixPaths.join('/');
 			}
 		}
+		const fileMatchPrefixes = [fileMatchPrefix, fileMatchBase].filter(p => !!p);
+
 		for (const setting of schemaSettings) {
 			const url = getSchemaId(setting, folderUri);
 			if (!url) {
@@ -511,23 +520,32 @@ function getSettings(): Settings {
 			if (Array.isArray(fileMatches)) {
 				const resultingFileMatches = schemaSetting.fileMatch || [];
 				schemaSetting.fileMatch = resultingFileMatches;
-				const addMatch = (pattern: string) => { //  filter duplicates
-					if (resultingFileMatches.indexOf(pattern) === -1) {
-						resultingFileMatches.push(pattern);
+
+				const appendMatch = (...patterns: string[][]) => { //  filter duplicates
+					for (const suffix of patterns) {
+						const pattern = [...fileMatchPrefixes, ...suffix].join('/');
+						if (resultingFileMatches.indexOf(pattern) === -1) {
+							resultingFileMatches.push(pattern);
+						}
 					}
 				};
+
 				for (const fileMatch of fileMatches) {
-					if (fileMatchPrefix) {
-						if (fileMatch[0] === '/') {
-							addMatch(fileMatchPrefix + fileMatch);
-							addMatch(fileMatchPrefix + '/*' + fileMatch);
-						} else {
-							addMatch(fileMatchPrefix + '/' + fileMatch);
-							addMatch(fileMatchPrefix + '/*/' + fileMatch);
-						}
-					} else {
-						addMatch(fileMatch);
+					const pathParts = fileMatch.split(/\//).filter(p => !!p);
+					const wantsRoot = pathParts[0] === rootGlob;
+					const filePaths: string[][] = [];
+
+					if (wantsRoot && fileMatchBase) {
+						pathParts.shift();
 					}
+
+					filePaths.push(pathParts);
+
+					if (!wantsRoot && isMultiRoot) {
+						filePaths.push(['*', ...pathParts]);
+					}
+
+					appendMatch(...filePaths);
 				}
 			}
 			if (setting.schema && !schemaSetting.schema) {
